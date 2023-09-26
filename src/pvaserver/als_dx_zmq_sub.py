@@ -407,27 +407,6 @@ class DXWriter:
             return
 
         
-        # opts = ""
-        # import time
-        # try:
-        #     if action == 2 or action == BCSFinishCodes.USER_ABORTED.value:
-        #         opts = "not to nersc"
-
-        #     update_url(data={ "filename" : self.active_filename, "status" : "file created", "opts" : opts} )
-
-        #     time.sleep(1)
-        #     if action == 1 or action == 3:
-        #         update_url(data = { "filename" : self.active_filename, "status" : "File aborted"})
-        #     time.sleep(1)
-
-        #     if file_size_error is True:
-        #         update_url(data = { "filename" : self.active_filename, "status" : "File size error"})
-        #     #time.sleep(1)
-
-        # except Exception as e:
-        #         logger.exception("Unable to update remote transfer")
-
- 
 
     def close_active_file(self):
 
