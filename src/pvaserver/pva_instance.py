@@ -6,11 +6,14 @@ import numpy as np
 import pvaccess as pva
 
 from pvaserver import __version__
-from pvaserver import util
+import util
 from pvaserver import log
 
 
 class FrameGenerator:
+    '''Generic class for generating frames.
+    This is taken from Francesco De Carlo's pvaServer code.
+    '''
     def __init__(self):
         self.frames = None
         self.nInputFrames = 0
@@ -44,7 +47,9 @@ class FrameGenerator:
 
 
 class NumpyRandomGenerator(FrameGenerator):
-
+    '''Class to create a set of frames of random numbers.
+    This is mostly useful for test purposes.
+    '''
     def __init__(self, nf, nx, ny, datatype, minimum, maximum):
         FrameGenerator.__init__(self)
         self.nf = nf
@@ -97,9 +102,9 @@ class PVABroadcaster:
         self.pvaServer.addRecord(self.channelName, pva.NtNdArray(), None)
             
 
-    def frameProducer(self, frame_data, nx, ny, dtype, compressorName, t=0):
+    def frameProducer(self, frameId, frame_data, nx, ny, dtype, compressorName, t=0):
         startTime = time.time()
-        frameId = 0
+        frame_data, dtype = self.adjust_dtype(frame_data, dtype)
         ntnda = util.AdImageUtility.generateNtNdArray2D(frameId, frame_data, nx, ny, dtype, compressorName, None)
         if t <= 0:
             t = time.time()
@@ -118,12 +123,17 @@ class PVABroadcaster:
         time.sleep(self.SHUTDOWN_DELAY)
         print("Shutting down pvaBroadcast")
 
+    def adjust_dtype(self, frame_data, dtype):
+        if frame_data.dtype == 'uint16' or frame_data.dtype == np.uint16:
+            return frame_data, dtype
+        elif frame_data.dtype == '>u2':
+            return frame_data.astype(np.uint16), 'uint16'
 
 class ArgsHolder():
     pass
 
 
-def test_code(rows = 256, columns = 256, dtype = 'uint8', num_frames = 100, time_delay = 0.1):
+def test_code(rows = 256, columns = 256, dtype = 'uint8', num_frames = 100, time_delay = 0.1, channel_name = "pvapy1:image"):
     '''Test that PVA broadcast works as we want it to.
     '''
     random_frames = NumpyRandomGenerator(num_frames, columns, rows, dtype, 0, 100)
@@ -136,7 +146,21 @@ def test_code(rows = 256, columns = 256, dtype = 'uint8', num_frames = 100, time
         pvab.frameProducer(random_frames.frames[i,...], columns, rows, dtype, None)
         time.sleep(0.5)
 
-
-
-
-
+def dual_test():
+    '''Test that PVA broadcast works for two sets of images simultaneously.
+    '''
+    random_frames1 = NumpyRandomGenerator(100, 256, 256, 'uint8', 0, 100)
+    args = ArgsHolder()
+    args.channel_name = "pvapy1:image"
+    pvab = PVABroadcaster(args)
+    pvab.start()
+    random_frames2 = NumpyRandomGenerator(100, 128, 256, 'uint8', 0, 100)
+    args2 = ArgsHolder()
+    args2.channel_name = "pvapy2:image"
+    pvab2 = PVABroadcaster(args2)
+    pvab2.start()
+    print(random_frames1.frames.shape)
+    for i in range(random_frames1.frames.shape[0]):
+        pvab.frameProducer(random_frames1.frames[i,...], 256, 256, 'uint8', None)
+        pvab2.frameProducer(random_frames2.frames[i,...], 128, 256, 'uint8', None)
+        time.sleep(0.5)

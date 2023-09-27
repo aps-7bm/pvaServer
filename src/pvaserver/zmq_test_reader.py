@@ -1,3 +1,4 @@
+import re
 import time
 import asyncio
 import datetime
@@ -436,6 +437,34 @@ class ReadBCSTomoData(object):
         #    DEBUG.write(msg)
         #print(msg)
         return msg
+    
+    def find_image_type(self, data_obj):
+        '''Finds the image type.
+        Looks in data_obj["params"] for a key of "image_key".
+        If this can't be found, parses data_obj["tif_file"]
+        0 = data, 1 = dark, 2 = white
+        '''
+        IMAGE_KEY = "image_key"
+        params_dict = params_to_dict(data_obj["params"])
+        if IMAGE_KEY in params_dict.keys():
+            return int(params_dict[IMAGE_KEY])
+        else:
+            tif_name = data_obj["tif_file"]
+            all_regex = '[0-9]{5}'
+            print(re.match(all_regex, tif_name))
+            print(tif_name)
+        
+    def params_to_dict(params):
+        kv_pair_list = params.decode().split('\r\n')
+        output_dict = {}
+        for i in kv_pair_list:
+            kv_split = i.split(' ')
+            if len(kv_split) > 1:
+                output_dict[kv_split[0]] = kv_split[1]
+            else:
+                output_dict[kv_split[0]] = ""
+        return output_dict
+    
 
 ### main from ZMQ ALS code
 
